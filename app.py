@@ -13,10 +13,20 @@ def appliancesconsumption():
     logs_url = "https://opticoolweb-backend.onrender.com/api/v1/activity-log"
 
     try:
-        power_data = requests.get(power_url).json()
-        activity_logs = requests.get(logs_url).json()
-    except Exception as e:
-        return jsonify({"error": "Failed to fetch data", "details": str(e)}), 500
+        power_response = requests.get(power_url)
+        logs_response = requests.get(logs_url)
+
+        power_response.raise_for_status()
+        logs_response.raise_for_status()
+
+        power_data = power_response.json()
+        activity_logs = logs_response.json()
+    except requests.exceptions.HTTPError as e:
+        return jsonify({"error": "HTTP error occurred", "details": str(e)}), 500
+    except requests.exceptions.RequestException as e:
+        return jsonify({"error": "Connection error occurred", "details": str(e)}), 500
+    except ValueError as e:
+        return jsonify({"error": "Invalid JSON", "details": str(e)}), 500
 
     wattage = {
         "AC 1": 1850,
@@ -78,7 +88,6 @@ def appliancesconsumption():
 
     result = [{"appliance": a, "energy_wh": round(wh, 2)} for a, wh in consumption.items()]
 
-    # === Render HTML output with a popup ===
     html_template = """
     <!DOCTYPE html>
     <html>
